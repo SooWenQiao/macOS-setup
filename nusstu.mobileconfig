@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple/DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>PayloadContent</key>
+	<array>
+		<dict>
+			<key>AutoJoin</key>
+			<true/>
+			<key>PayloadType</key>
+			<string>com.apple.wifi.managed</string>
+			<key>PayloadIdentifier</key>
+			<string>edu.nus.wifi.NUS_STU</string> # or com.example.wifi? which is true???
+			<key>PayloadUUID</key>
+			<string>1D4F9E5D-AE9C-4891-A53B-C982E248E3D3</string>
+			<key>PayloadVersion</key>
+			<integer>1</integer>
+			<key>PayloadDisplayName</key>
+			<string>NUS_STU Wifi Configuration</string>
+			<key>SSID_STR</key>
+			<string>NUS_STU</string>
+			<key>DomainName</key>
+			<string>auth01.nw.nus.edu.sg</string>
+			<key>PayloadCertificateAnchorUUID</key>
+			<array/>
+			<key>AcceptEAPTypes</key>
+			<array>
+			<integer>25</integer>
+			</array>
+			<key>EncryptionType</key>
+			<string>WPA</string>
+			<key>Username</key>
+			<string>NUSSTU\eXXXXXXX</string>
+			<key>Password</key>
+			<string>XXXXXXXXXXXXXXX</string>
+			<key>TTLSInnerAuthentication</key>
+			<string>MSCHAPv2</string>
+		</dict>
+	</array>
+</dict>
+</plist>
