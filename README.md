@@ -7,6 +7,7 @@ git clone https://github.com/SooWenQiao/macOS-setup.git
 cd macOS-setup
 chmod +x setup.sh
 ./setup.sh
+```
 
 ## Remark: 
 1. The hello.sh is executed inside setup.sh to check if the installation is properly undergone. It will create a directory 'iniproj'
