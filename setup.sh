@@ -8,9 +8,8 @@ is_cmd () {
 
 config_terminal() {
 	echo "PROMPT='%F{029}%T:%f %B%F{039}%n%f%b %U%F{119}%2d%u %B%?%b >>%f '" >> ~/.zshrc
-	if ! -d ~/Desktop/screenshots; then 
+	if [ ! -d ~/Desktop/screenshots ]; then 
 		mkdir -p ~/Desktop/screenshots
-	else
 	fi
 	sudo defaults write com.apple.screencapture location ~/Desktop/screenshots
 	sudo defaults write /Library/Preferences/com.apple.loginwindow AdminHosttInfo HostName
@@ -52,9 +51,7 @@ set_git() {
 	[[ ! -f $ssh_config ]] && touch "$ssh_config"
 	echo "Host github.com\n HostName github.com\n User git\n IdentityFile $ssh_key_file\n" >> "$ssh_config"
 	chmod 600 "$ssh_config"
-	else
-		echo "Git is missing. Check Xcode CLTs. "
-	fi
+	# "Git is missing. Check Xcode CLTs. "
 }
 
 is_brew() {
@@ -64,8 +61,9 @@ is_brew() {
 		echo >> ~/.zprofile
 		echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
 		eval "$(/opt/homebrew/bin/brew shellenv)"
-		export PATH="/opt/homebrew/bin:$PATH"
-		export HOMEBREW_CASK_OPTS="--appdir=/Applications"
+		echo 'export PATH="/opt/homebrew/bin:$PATH"' >> ~/.zshrc
+		echo 'export HOMEBREW_CASK_OPTS="--appdir=/Applications"' >> ~/.zshrc
+		source ~/.zshrc
 	else
 		echo "Homebrew installed. Checking for updates..."
 		brew update
@@ -75,7 +73,7 @@ is_brew() {
 set_brew() {
 	is_brew
 	local base_packages=(
-		mas gh pkg-config tree github-keygen ssh-copy-id java openjdk jenv llvm node nvm jenkins mongodb mysql postgresql
+		mas gh pkg-config tree github-keygen ssh-copy-id java openjdk jenv llvm node nvm jenkins mongodb-compass mysql postgresql
 		go python pyenv pyenv-virtualenv julia rustup-init tygo swift kubectl freetds R
 	)
 	local casks=(brave-browser google-chrome opera whatsapp wechat slack zoom visual-studio-code docker rstudio mactex)
@@ -88,7 +86,7 @@ set_brew() {
 set_neon() {
 	if ! is_cmd neonctl; then
 		echo "Installing Neon CLI..."
-		curl -fsSL https://neon.tech/install.sh | bash
+		brew install neonctl
 		echo 'export PATH="$HOME/.neon/bin:$PATH"' >> ~/.zshrc
 		source ~/.zshrc
 	else
@@ -147,6 +145,7 @@ set_path_and_symlinks() {
 	if is_cmd rstudio; then
 		echo "RStudio installed. Version: $(rstudio --version)"
 		open -a RStudio
+	fi
 }
 
 #	packages=(
