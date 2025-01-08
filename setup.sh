@@ -1,33 +1,23 @@
 #!/bin/bash
-
-# appleid login & wifi connection
-# airport command is deprecated, can use .mobileconfig, 
-# but it can only be installed from Apple GUI, can't from terminal anymore
-# check current network connection
-networksetup -getairportnetwork en0
-# generate UUID for wifi connection profile nusstu.mobileconfig
-echo "UUID=$(uuidgen)" >> ~/.zshrc
-source ~/.zshrc
-
-# list all possible nearby wifi connection: system_profiler SPAirPortDataType
-# list all files: ls -a /usr/bin
-
-# terminal configuration
-echo '# prompt configuration' >> ~/.zshrc
-echo "PROMPT='%F{029}%T:%f %B%F{039}%n%f%b %U%F{119}%2d%u %B%?%b >>%f '" >> ~/.zshrc
-echo "Prompt configuration added and applied."
-source ~/.zshrc
-
-mkdir -p ~/Desktop/screenshots
-sudo defaults write com.apple.screencapture location ~/Desktop/screenshots
-sudo defaults write /Library/Preferences/com.apple.loginwindow LoginwindowText "爱笑的女孩\n运气不会太差🍀"
-
-sudo defaults write com.apple.Terminal "Basic" -dict-add TabStopWidth -int 2
-killall Terminal
+set -euo pipefail
 
 # check command existence
-command_exists() {
-        command -v "$1" &> /dev/null 2>&1
+is_cmd () {
+    command -v "$1" &> /dev/null 2>&1
+}
+
+config_terminal() {
+	echo "PROMPT='%F{029}%T:%f %B%F{039}%n%f%b %U%F{119}%2d%u %B%?%b >>%f '" >> ~/.zshrc
+	if ! -d ~/Desktop/screenshots; then 
+		mkdir -p ~/Desktop/screenshots
+	else
+	fi
+	sudo defaults write com.apple.screencapture location ~/Desktop/screenshots
+	sudo defaults write /Library/Preferences/com.apple.loginwindow AdminHosttInfo HostName
+	sudo defaults write /Library/Preferences/com.apple.loginwindow LoginwindowText "爱笑的女孩\n运气不会太差🍀"
+	sudo defaults write com.apple.Terminal "Basic" -dict-add TabStopWidth -int 2
+	defaults write NSGlobalDomain NSAutomaticSpellingCorrectionEnabled -bool false
+	source ~/.zshrc
 }
 
 # ensure the script is being run as root
@@ -36,62 +26,128 @@ command_exists() {
 #	exit 1
 # fi
 
-# brew installation
-if ! command_exists brew; then
-	echo "Installing Homebrew..."
-	/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-	echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zshprofile
-	eval "$(/opt/homebrew/bin/brew shellenv)"
-else
-	echo "Homebrew installed. Checking for updates..."
-	brew update
-fi
+is_git() {
+	if ! is_cmd git; then 
+		echo "Installing git..."
+		sudo xcode-select --switch /Library/Developer/CommandLineTools/
+	else
+		echo "Git installed."
+	fi
+}
 
-# git installation
-if ! command_exists git; then
-	echo "Installing git..."
-	sudo xcode-select --switch /Library/Developer/CommandLineTools/
+set_git() {
+	is_git
+	echo "Setting up git now..."
 	git --version
-else
-	echo "Git installed. Version: "
-	git --version
-fi
+	local email="soowenqiao@gmail.com"
+	local ssh_key_file="$HOME/.ssh/id_ed25519"
+	git config --global user.name "sooqq"
+	git config --global user.email "soowenqiao@gmail.com"
+	
+	ssh-keygen -t ed25519 -C "$email" -f "$ssh_key_file" -N ""
+	eval "$(ssh-agent -s)"
+	ssh-add "$ssh_key_file"
+	pbcopy < "${ssh_key_file}.pub"
+	local ssh_config="$HOME/.ssh/config"
+	[[ ! -f $ssh_config ]] && touch "$ssh_config"
+	echo "Host github.com\n HostName github.com\n User git\n IdentityFile $ssh_key_file\n" >> "$ssh_config"
+	chmod 600 "$ssh_config"
+	else
+		echo "Git is missing. Check Xcode CLTs. "
+	fi
+}
 
-# clang installation
-if ! command_exists clang; then
-	echo "Installing Clang..."
-	brew install llvm
+is_brew() {
+	if ! is_cmd brew; then
+		echo "Installing Homebrew..."
+		/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+		echo >> ~/.zprofile
+		echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+		eval "$(/opt/homebrew/bin/brew shellenv)"
+		export PATH="/opt/homebrew/bin:$PATH"
+		export HOMEBREW_CASK_OPTS="--appdir=/Applications"
+	else
+		echo "Homebrew installed. Checking for updates..."
+		brew update
+	fi
+}
+
+set_brew() {
+	is_brew
+	local base_packages=(
+		mas gh pkg-config tree github-keygen ssh-copy-id java openjdk jenv llvm node nvm jenkins mongodb mysql postgresql
+		go python pyenv pyenv-virtualenv julia rustup-init tygo swift kubectl freetds R
+	)
+	local casks=(brave-browser google-chrome opera whatsapp wechat slack zoom visual-studio-code docker rstudio mactex)
+	echo "Installing base packages and GUI apps...\n"
+	brew install "${base_packages[@]}"
+	brew install --cask "${casks[@]}"
+	brew cleanup
+}
+
+set_neon() {
+	if ! is_cmd neonctl; then
+		echo "Installing Neon CLI..."
+		curl -fsSL https://neon.tech/install.sh | bash
+		echo 'export PATH="$HOME/.neon/bin:$PATH"' >> ~/.zshrc
+		source ~/.zshrc
+	else
+		echo "Neon installed. Version: $(neonctl --version)\n"
+	fi
+}
+
+set_psql() {
+    if is_cmd psql; then
+        printf "Setting up PostgreSQL...\n"
+        brew services start postgresql
+        psql postgres -c "CREATE ROLE dev WITH LOGIN PASSWORD 'sqq';" || true
+        psql postgres -c "ALTER ROLE dev CREATEDB;" || true
+        printf "PostgreSQL is ready. Connect using: psql -U dev -h localhost -d postgres\n"
+    else
+        printf "PostgreSQL installation failed or missing. Check Homebrew.\n" >&2
+    fi
+}
+
+set_path_and_symlinks() {
+	echo "Setting language environments...\n"
+	echo "Setting language path..."
+	echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.zshrc
+	echo 'export PATH="/opt/homebrew/bin:$PATH"' >> ~/.zshrc
+	echo 'export PATH="/usr/local/bin/R:$PATH"' >> ~/.zshrc
 	echo 'export PATH="/opt/homebrew/opt/llvm/bin:$PATH"' >> ~/.zshrc
+	echo 'export PATH="/opt/homebrew/opt/node/bin:$PATH"' >> ~/.zshrc
+	echo 'export PATH="/opt/homebrew/opt/mysql/bin:$PATH"' >> ~/.zshrc
+	echo 'export PATH="/opt/homebrew/opt/julia/bin:$PATH"' >> ~/.zshrc
 	source ~/.zshrc
-else
-	echo "Clang installed. Version: "
-	clang --version
-fi
-
-# java installation
-if ! command_exists java; then
-	echo "Installing Java... "
-	brew install java
-	sudo ln -sfn /opt/homebrew/opt/openjdk/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk.jdk
-	echo 'export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"' >> ~/.zshrc
-	echo 'export JAVA_HOME="/Library/Java/JavaVirtualMachines/openjdk.jdk/Contents/Home"' >> ~/.zshrc
-	export CPPFLAGS="-I/opt/homebrew/opt/openjdk/include"
-	source ~/.zshrc
-	java --version
-else
-	echo "Java installed. Version: "
-	java --version
-fi
-
-# python and its packages installation
-if ! command_exists python3; then
-	echo "Installing Python..."
-	brew install python
-	brew install jupyterlab python-matplotlib python-requests
-else
-	echo "Python3 installed. Version:"
-	python3 --version
-fi
+	if is_cmd java; then
+		sudo ln -sfn /opt/homebrew/opt/openjdk/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk.jdk
+		echo 'export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"' >> ~/.zshrc
+		echo 'export JAVA_HOME="/Library/Java/JavaVirtualMachines/openjdk.jdk/Contents/Home"' >> ~/.zshrc
+		echo 'export CPPFLAGS="-I/opt/homebrew/opt/openjdk/include"' >> ~/.zshrc
+		source ~/.zshrc
+		echo "Java path added. Version: $(java --version)"
+	fi
+	if is_cmd pyenv; then
+		echo 'PYENV_ROOT="$HOME/.pyenv"' >> ~/.zshrc
+		echo 'PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.zshrc
+		echo 'eval "$(pyenv init --path)"' >> ~/.zshrc
+		source ~/.zshrc
+		echo "pyenv path added."
+	fi
+	if is_cmd mysql; then
+		brew services start mysql
+		echo "MySQL installed. Version: $(mysql --version)"
+	fi
+	if is_cmd R; then
+		echo 'export LC_ALL=en_US.UTF-8' >> ~/.zshrc
+		echo 'export LANG=en_US.UTF-8' >> ~/.zshrc
+		source ~/.zshrc
+		echo "R installed. Version: $(R --version)"
+	fi
+	if is_cmd rstudio; then
+		echo "RStudio installed. Version: $(rstudio --version)"
+		open -a RStudio
+}
 
 #	packages=(
 #		jupyter numpy pandas scipy simpy sympy
@@ -106,78 +162,15 @@ fi
 #		requests beautifulsoup4 scrapy selenium lxml flask streamlit
 #	)
 
-# julia installation
-if ! command_exists julia; then
-	echo "Installing Julia... "
-	brew install julia
-	echo "Julia installed. "
-else
-	echo "Julia installed. "
-	julia --version
-fi
+main_setup() {
+	config_terminal
+	set_brew
+	set_git
+	set_neon
+	set_psql
+	set_path_and_symlinks
+	chmod +x ./hello.sh
+	./hello.sh
+}
 
-# javascript installation
-if ! command_exists node; then
-	echo "Installing Node.js..."
-	brew install node
-else
-	echo "Node.js installed. Version:"
-	node --version
-fi
-
-# MySQL installation
-if ! command_exists mysql; then
-        echo "Installing MySQL..."
-        brew install mysql
-        brew services start mysql
-else
-        echo "MySQL installed. Version: "
-        mysql --version
-fi
-
-# VS Code installation
-if ! command_exists code; then
-	echo "Installing Visual Studio Code..."
-	brew install --cask visual-studio-code
-else
-	echo "Visual Studio Code installed. Version: "
-	code --version
-fi
-
-# Docker installation
-if ! command_exists docker; then
-	echo "Installing Docker... "
-	brew install --cask docker
-	open /Applications/Docker.app
-	echo "Docker installed. "
-else
-	echo "Docker installed. Version: "
-	docker --version
-fi
-
-# R and RStudio installation
-if ! command_exists R; then
-	echo "Installing R... "
-	brew install R
-	echo 'export PATH="/usr/local/bin/R:$PATH"' >> ~/.zshrc
-	source ~/.zshrc
-	echo "R installed."
-	Rscript -e 'install.packages(c("tidyverse", "data.table", "ggplot2", "dplyr", "shiny", "caret", "randomForest", "e1071"), repos="http://cran.rstudio.com/")'
-else
-	echo "R installed. Version:"
-	R --version
-fi
-
-if ! command_exists rstudio; then
-        echo "Installing RStudio..."
-        brew install --cask rstudio
-        echo "RStudio installed."
-	open -a RStudio
-else
-        echo "RStudio installed. Version:"
-        rstudio --version
-fi
-
-# Testing compiled programming languages
-chmod +x ~/hello.sh
-./hello.sh
+main_setup

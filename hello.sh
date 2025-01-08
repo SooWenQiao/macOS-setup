@@ -1,8 +1,4 @@
 #!/bin/bash
-
-mkdir -p iniproj
-cd iniproj
-
 clang_hello() {
 	cat <<EOF > ~/iniproj/hello.c
 #include <stdio.h>
@@ -83,13 +79,19 @@ open_vscode() {
 	code --
 }
 
-echo "Testing programming languages that work in terminal: "
-clang_hello
-cpp_hello
-java_hello
-python_hello
-js_hello
-sql_hello
-open_vscode
-r_hello
-julia_hello
+main_hello() {
+	mkdir -p ~/iniproj
+	cd ~/iniproj
+	echo "Testing programming languages that work in terminal: "
+	clang_hello
+	cpp_hello
+	java_hello
+	python_hello
+	js_hello
+	sql_hello
+	r_hello
+	julia_hello
+	open_vscode
+}
+
+main_hello
